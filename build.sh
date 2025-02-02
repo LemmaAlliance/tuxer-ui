@@ -6,13 +6,19 @@ if [ $? -ne 0 ]; then
     exit 1
 fi
 
+nasm -f elf64 -o build/initsock.o src/initsock.asm
+if [ $? -ne 0 ]; then
+    echo "Error assembling initsock.asm"
+    exit 1
+fi
+
 nasm -f elf64 -o build/main.o src/main.asm
 if [ $? -ne 0 ]; then
     echo "Error assembling main.asm"
     exit 1
 fi
 
-gcc -o build/main build/main.o build/hello.o -static -nostartfiles
+gcc -o build/main build/main.o build/hello.o build/initsock.o -static -nostartfiles
 if [ $? -ne 0 ]; then
     echo "Error linking object files"
     exit 1

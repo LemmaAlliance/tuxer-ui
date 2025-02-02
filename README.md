@@ -6,6 +6,6 @@ If you want to contribute to this project (or make your own version), first fami
 For debian based systems:
 ```
 sudo apt update
-sudo apt install binutils nasm libx11-dev
+sudo apt install binutils nasm
 ```
 Then you are ready to begin programming!

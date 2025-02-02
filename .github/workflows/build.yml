@@ -1,0 +1,29 @@
+name: Build Project
+
+on:
+  push:
+    branches:
+      - main
+      - linux
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Install dependencies (ld, nasm & binitils)
+        run: |
+          sudo apt update
+          sudo apt install -y binutils nasm
+
+      - name: Run build script
+        run: |
+          chmod +x ./build.sh
+          ./build.sh
+        continue-on-error: false
