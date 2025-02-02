@@ -3,9 +3,16 @@ global initsock
 extern print
 
 section .data
-    opening db 'Opening a socket', 0x0A, 0
+    opening db 'Opening a socket.', 0x0A, 0
     opened db 'Socket opened!', 0x0A, 0
-    handshake_error db 'Error with handshake', 0x0A, 0
+    connecting db 'Connecting to X11 server.', 0x0A, 0
+    connected db 'Connected to the X11 server.', 0x0A, 0
+    sending db 'Sending handshake.', 0x0A, 0
+    sent db 'Handshake sent.', 0x0A, 0
+    receiving db 'Receiving handhsake.', 0x0A, 0
+    received db 'Received handshake.', 0x0A, 0
+    handshake_error db 'Error with handshake.', 0x0A, 0
+
     x11_sock_path db '/tmp/.X11-unix/X1', 0 ; Null terminated string
     protocol_id db 0x6C ; Protocol ID (X11)
     major_version db 0x00, 0x00, 0x00, 0x11 ; Major version 11
@@ -38,17 +45,35 @@ initsock:
     mov rsi, sockaddr + 2 ; Address of sun_path (starting at byte 2)
     call strcpy ; Copy path
     
+    mov rdi, connecting
+    call print
+
     mov rax, 42 ; Syscall n for connect
     mov rdi, rbx ; Socket file descriptor
     lea rsi, [sockaddr] ; Pointer to sockaddr_un structure
     mov rdx, 110
     syscall
 
+    mov rdi, connected
+    call print
+
+    mov rdi, sending
+    call print
+
     ; Send handshake
     call send_handshake
+
+    mov rdi, sent
+    call print
     
+    mov rdi, receiving
+    call print
+
     ; Recieve handshake response
     call recv_handshake_response
+
+    mov rdi, received
+    call print
 
     ret
 
@@ -70,9 +95,12 @@ recv_handshake_response:
 
     ; Check if response is valid
     ; For now only check if the status byte is correct
+    mov rdi, response_buffer
+    call print
     mov al, [response_buffer] ; Status byte
     cmp al, 0x00 ; Check if success
     jne .error_handshake
+    ret
 
 .error_handshake:
     mov rdi, handshake_error
