@@ -1,6 +1,6 @@
 # Should compile to a .o file when going into prod, will compile to a bin for now.
 
-nasm -f elf64 -o build/hello.o src/hello.asm
+nasm -f elf64 -o build/print.o src/print.asm
 if [ $? -ne 0 ]; then
     echo "Error assembling hello.asm"
     exit 1
@@ -18,7 +18,7 @@ if [ $? -ne 0 ]; then
     exit 1
 fi
 
-gcc -o build/main build/main.o build/hello.o build/initsock.o -static -nostartfiles
+gcc -o build/main build/main.o build/print.o build/initsock.o -static -nostartfiles
 if [ $? -ne 0 ]; then
     echo "Error linking object files"
     exit 1

@@ -1,16 +1,20 @@
 bits 64
 global initsock
+extern print
 
 section .data
+    opening db 'Opening a socket', 0
+    handshake_error db 'Error with handshake', 0
     x11_sock_path db '/tmp/.X11-unix/X0', 0 ; Null terminated string
     protocol_id db 0x6C ; Protocol ID (X11)
     major_version db 0x00, 0x00, 0x00, 0x11 ; Major version 11
     minor_version db 0x00, 0x00, 0x00, 0x00 ; Minor version 0
     client_magic db 0x12, 0x34, 0x56, 0x78, 0x9A, 0xBC, 0xDE, 0xF0 ; Magic number
-    handshake_request db 0x6C, 0x00, 0x00, 0x00, 0x11, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x12, 0x34, 0x56, 0x78
+    handshake_request db 0x6C, 0x00, 0x00, 0x00, 0x11, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x12, 0x34, 0x56, 0x78 ; The handshake
 
 section .bss
     sockaddr resb 110
+    response_buffer resb 16
 
 section .text
 
@@ -34,9 +38,39 @@ initsock:
     mov rdx, 110
     syscall
 
-    ; Send other requests
+    ; Send handshake
+    call send_handshake
+    
+    ; Recieve handshake response
+    call recv_handshake_response
 
     ret
+
+send_handshake:
+    mov rax, 44
+    mov rdi, rbx
+    lea rsi, [handshake_request]
+    mov rdx, 16
+    syscall
+    ret
+
+recv_handshake_response:
+    ; Allocate response space
+    lea rsi, [response_buffer] ; Pointer to buffer
+    mov rax, 45 ; sys_recv
+    mov rdi, rbx ; socket file descriptor
+    mov rdx, 16 ; number of bytes to read
+    syscall
+
+    ; Check if response is valid
+    ; For now only check if the status byte is correct
+    mov al, [response_buffer] ; Status byte
+    cmp al, 0x00 ; Check if success
+    jne .error_handshake
+
+.error_handshake:
+    mov rdi, handshake_error
+    call print
 
 strcpy:
     ; rdi = destination
