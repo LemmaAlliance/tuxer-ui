@@ -3,8 +3,9 @@ global initsock
 extern print
 
 section .data
-    opening db 'Opening a socket', 0
-    handshake_error db 'Error with handshake', 0
+    opening db 'Opening a socket', 0x0A, 0
+    opened db 'Socket opened!', 0x0A, 0
+    handshake_error db 'Error with handshake', 0x0A, 0
     x11_sock_path db '/tmp/.X11-unix/X0', 0 ; Null terminated string
     protocol_id db 0x6C ; Protocol ID (X11)
     major_version db 0x00, 0x00, 0x00, 0x11 ; Major version 11
@@ -19,11 +20,16 @@ section .bss
 section .text
 
 initsock:
+    mov rdi, opening
+    call print
     mov eax, 41 ; Open a socket
     mov ebx, 1 ; Open it locally on UNIX domain socket (/tmp/.X11-unix/X0)
     mov ecx, 1 ; SOCK_STREAN
     mov edx, 0 ; Protocol 0 (default)
     syscall
+
+    mov rdi, opened
+    call print
 
     mov rbx, rax ; Save socket file descriptor
 
@@ -71,6 +77,7 @@ recv_handshake_response:
 .error_handshake:
     mov rdi, handshake_error
     call print
+    ret
 
 strcpy:
     ; rdi = destination

@@ -12,7 +12,7 @@ section .text
 _start:
     mov rdi, welcome
     call print
-    ;call initsock
+    call initsock
 
     mov rax, 60
     mov rdi, 0
