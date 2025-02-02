@@ -6,7 +6,7 @@ section .data
     opening db 'Opening a socket', 0x0A, 0
     opened db 'Socket opened!', 0x0A, 0
     handshake_error db 'Error with handshake', 0x0A, 0
-    x11_sock_path db '/tmp/.X11-unix/X0', 0 ; Null terminated string
+    x11_sock_path db '/tmp/.X11-unix/X1', 0 ; Null terminated string
     protocol_id db 0x6C ; Protocol ID (X11)
     major_version db 0x00, 0x00, 0x00, 0x11 ; Major version 11
     minor_version db 0x00, 0x00, 0x00, 0x00 ; Minor version 0
