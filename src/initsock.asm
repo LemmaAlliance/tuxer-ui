@@ -13,7 +13,7 @@ section .data
     received db 'Received handshake.', 0x0A, 0
     handshake_error db 'Error with handshake.', 0x0A, 0
 
-    x11_sock_path db '/tmp/.X11-unix/X1', 0 ; Null terminated string
+    x11_socket db "/tmp/.X11-unix/X0", 0 ; Null terminal
     protocol_id db 0x6C ; Protocol ID (X11)
     major_version db 0x00, 0x00, 0x00, 0x11 ; Major version 11
     minor_version db 0x00, 0x00, 0x00, 0x00 ; Minor version 0
@@ -21,6 +21,7 @@ section .data
     handshake_request db 0x6C, 0x00, 0x00, 0x00, 0x11, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x12, 0x34, 0x56, 0x78 ; The handshake
 
 section .bss
+    response resb 32
     sockaddr resb 110
     response_buffer resb 16
 
@@ -30,9 +31,9 @@ initsock:
     mov rdi, opening
     call print
     mov rax, 41 ; Open a socket
-    mov rbx, 1 ; Open it locally on UNIX domain socket (/tmp/.X11-unix/X0)
-    mov rcx, 1 ; SOCK_STREAN
-    mov rdx, 0 ; Protocol 0 (default)
+    mov rdi, 1 ; Socket
+    mov rsi, 1 ; SOCK_STREAM
+    mov rdx, 0 ; Protocol 0
     syscall
 
     mov rdi, opened
@@ -41,7 +42,7 @@ initsock:
     mov rbx, rax ; Save socket file descriptor
 
     mov byte [sockaddr], 1 ; sa_family = AF_UNIX
-    lea rdi, [x11_sock_path] ; Load address of /tmp/.X11-unix/X0
+    lea rdi, [x11_socket] ; Load address of /tmp/.X11-unix/X0
     mov rsi, sockaddr + 2 ; Address of sun_path (starting at byte 2)
     call strcpy ; Copy path
     
