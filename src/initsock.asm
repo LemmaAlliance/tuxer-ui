@@ -29,10 +29,10 @@ section .text
 initsock:
     mov rdi, opening
     call print
-    mov eax, 41 ; Open a socket
-    mov ebx, 1 ; Open it locally on UNIX domain socket (/tmp/.X11-unix/X0)
-    mov ecx, 1 ; SOCK_STREAN
-    mov edx, 0 ; Protocol 0 (default)
+    mov rax, 41 ; Open a socket
+    mov rbx, 1 ; Open it locally on UNIX domain socket (/tmp/.X11-unix/X0)
+    mov rcx, 1 ; SOCK_STREAN
+    mov rdx, 0 ; Protocol 0 (default)
     syscall
 
     mov rdi, opened
