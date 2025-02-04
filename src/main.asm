@@ -5,7 +5,7 @@ global exit
 
 section .data
     welcome db 'Welcome to the tuxer-ui software', 0x0A, 0
-    exiting db 'Exiting software', 0x0A, 0
+    exiting db 'Exiting software...', 0x0A, 0
 
 section .text
     global _start

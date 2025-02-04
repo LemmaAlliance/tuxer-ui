@@ -53,8 +53,8 @@ initsock:
     lea rsi, [x11_socket]
     mov rdx, 110 ; Size of socket addr
     syscall
-    test rax, rax
-    js _connect_error
+    test rax, rax ; Did we connect?
+    js _connect_error ; If not, throw an error
     
     mov rdi, connecting
     call print
