@@ -9,7 +9,7 @@ section .data
     connected db 'Connected to the X11 server.', 0x0A, 0
     sending db 'Sending handshake.', 0x0A, 0
     sent db 'Handshake sent.', 0x0A, 0
-    receiving db 'Receiving handhsake.', 0x0A, 0
+    receiving db 'Receiving handshake.', 0x0A, 0
     received db 'Received handshake.', 0x0A, 0
     handshake_error db 'Error with handshake.', 0x0A, 0
 
