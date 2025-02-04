@@ -1,6 +1,7 @@
 bits 64
 global initsock
 extern print
+extern exit
 
 section .data
     opening db 'Opening a socket.', 0x0A, 0
@@ -11,7 +12,9 @@ section .data
     sent db 'Handshake sent.', 0x0A, 0
     receiving db 'Receiving handshake.', 0x0A, 0
     received db 'Received handshake.', 0x0A, 0
-    handshake_error db 'Error with handshake.', 0x0A, 0
+    socket_error_msg db 'Error with socket.', 0x0A, 0
+    connect_error_msg db 'Error connecting to X11.', 0x0A, 0
+    handshake_error_msg db 'Error with handshake.', 0x0A, 0
 
     x11_socket db "/tmp/.X11-unix/X0", 0 ; Null terminal
     protocol_id db 0x6C ; Protocol ID (X11)
@@ -30,21 +33,28 @@ section .text
 initsock:
     mov rdi, opening
     call print
+
+    ; Opening a socket
     mov rax, 41 ; Open a socket
     mov rdi, 1 ; Socket
     mov rsi, 1 ; SOCK_STREAM
     mov rdx, 0 ; Protocol 0
     syscall
+    test rax, rax
+    js _error_socket
+    mov r12, rax ; Store socket FD
 
     mov rdi, opened
     call print
 
-    mov rbx, rax ; Save socket file descriptor
-
-    mov byte [sockaddr], 1 ; sa_family = AF_UNIX
-    lea rdi, [x11_socket] ; Load address of /tmp/.X11-unix/X0
-    mov rsi, sockaddr + 2 ; Address of sun_path (starting at byte 2)
-    call strcpy ; Copy path
+    ; Connecting an X11 socket
+    mov rax, 42 ; syscall: connect to a socket
+    mov rdi, r12 ; socket FD
+    lea rsi, [x11_socket]
+    mov rdx, 110 ; Size of socket addr
+    syscall
+    test rax, rax
+    js _connect_error
     
     mov rdi, connecting
     call print
@@ -100,11 +110,21 @@ recv_handshake_response:
     call print
     mov al, [response_buffer] ; Status byte
     cmp al, 0x00 ; Check if success
-    jne .error_handshake
+    jne _error_handshake
     ret
 
-.error_handshake:
-    mov rdi, handshake_error
+_error_socket:
+    mov rdi, socket_error_msg
+    call print
+    call exit
+
+_connect_error:
+    mov rdi, connect_error_msg
+    call print
+    call exit
+
+_error_handshake:
+    mov rdi, handshake_error_msg
     call print
     ret
 
