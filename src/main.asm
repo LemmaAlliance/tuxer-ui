@@ -1,6 +1,7 @@
 bits 64
 extern print
 extern initsock
+extern create_window
 global exit
 
 section .data
@@ -15,6 +16,8 @@ _start:
     mov rdi, welcome
     call print
     call initsock
+
+    call create_window
 
     call exit
 

@@ -13,13 +13,19 @@ if [[ $? -ne 0 ]]; then
     exit 1
 fi
 
+nasm -f elf64 -o build/createwindow.o src/createwindow.asm
+if [[ $? -ne 0 ]]; then
+    echo "Error assembling createwindow.asm"
+    exit 1
+fi
+
 nasm -f elf64 -o build/main.o src/main.asm
 if [[ $? -ne 0 ]]; then
     echo "Error assembling main.asm"
     exit 1
 fi
 
-gcc -o build/main build/main.o build/print.o build/initsock.o -static -nostartfiles -no-pie -Wl,--gc-sections
+gcc -o build/main build/main.o build/print.o build/initsock.o build/createwindow.o -static -nostartfiles -no-pie -Wl,--gc-sections
 if [[ $? -ne 0 ]]; then
     echo "Error linking object files"
     exit 1
