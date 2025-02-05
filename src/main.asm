@@ -18,6 +18,7 @@ _start:
     call initsock
 
     call create_window
+    call window_loop
 
     call exit
 

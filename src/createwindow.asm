@@ -100,7 +100,6 @@ create_window:
 
     ret
 
-
 _win_error:
     mov rdi, win_err_msg
     call print
