@@ -21,6 +21,14 @@ _start:
 
     call exit
 
+window_loop:
+    mov rax, 35
+    mov rdi, -1
+    mov rsi, 0
+    mov rdx, 0
+    syscall
+    jmp window_loop
+
 exit:
     mov rdi, exiting
     call print
