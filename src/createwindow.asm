@@ -5,12 +5,14 @@
 bits 64
 global create_window
 extern print
+extern exit
 extern x11_sockfd
 
 ; Data messages for logging
 section .data
     creating_window  db "Creating window...", 0x0A, 0
     window_created   db "Window created.", 0x0A, 0
+    win_err_msg db "Error creating window", 0x0A, 0
 
 ; A buffer for our CreateWindow request
 ; We use a minimal CreateWindow request that fits the following format:
@@ -89,10 +91,17 @@ create_window:
     mov rdx, 32            ; length of our CreateWindow request
     syscall                ; perform the send syscall
 
-    ; (Optional: check return value in rax for error handling.)
+    test rax, rax
+    js _win_error
 
     ; Log that the window was “created”.
     mov rdi, window_created
     call print
 
     ret
+
+
+_win_error:
+    mov rdi, win_err_msg
+    call print
+    call exit
