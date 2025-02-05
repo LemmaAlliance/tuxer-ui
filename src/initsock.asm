@@ -22,9 +22,8 @@ section .data
     handshake_request db 0x6C, 0x00, 0x00, 0x00, 0x11, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x12, 0x34, 0x56, 0x78
 
 section .bss
-    response resb 32
-    sockaddr resb 110
     response_buffer resb 16
+    sockaddr resb 110
     x11_sockfd resq 1
 
 section .text
@@ -100,12 +99,13 @@ send_handshake:
     ret
 
 recv_handshake_response:
-    ; Receive response
     lea rsi, [response_buffer]  ; Buffer pointer
     mov rax, 45                 ; syscall: recv
     mov rdi, r12                ; socket FD
     mov rdx, 16                 ; Number of bytes
     syscall
+    test rax, rax               ; Check if recv was successful
+    js _error_handshake
 
     ; Check if response is valid
     mov al, [response_buffer]   ; Status byte
@@ -126,12 +126,11 @@ _connect_error:
 _error_handshake:
     mov rdi, handshake_error_msg
     call print
-    ret
+    call exit
 
 strcpy:
     ; rdi = destination
     ; rsi = source
-    ; Copy string from rsi to rdi
     .loop:
         mov al, [rsi]
         mov [rdi], al
