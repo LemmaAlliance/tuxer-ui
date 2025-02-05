@@ -1,120 +1,98 @@
 ; create_window.asm
-; This file provides an entry point "create_window" that solely builds
-; and sends an X11 CreateWindow request using an already established
-; X11 connection.
-;
-; Assumptions:
-;   - The connected socket file descriptor is stored in "sock_fd"
-;   - "window_id_placeholder" holds our new window ID.
-;   - "root_window_placeholder" holds the root window ID.
-;   - "visual_id_placeholder" holds the default visual ID.
-;
-; Assemble with: nasm -f elf64 create_window.asm -o create_window.o
-; Link with: ld create_window.o -o create_window
-; (If linking with other modules, adjust your linker settings accordingly.)
+; This snippet builds an X11 CreateWindow request and sends it using the send syscall.
+; For simplicity, many X11 details are hardcoded or simplified.
 
 bits 64
 global create_window
-extern print    ; An external routine for printing strings (optional)
-extern exit     ; An external exit routine (optional)
+extern print
+extern x11_sockfd
 
-;-------------------------------------------------------------------------
-; Data Section: Messages (for debugging)
-;-------------------------------------------------------------------------
+; Data messages for logging
 section .data
-    window_created_msg db "Window created.", 0x0A, 0
+    creating_window  db "Creating window...", 0x0A, 0
+    window_created   db "Window created.", 0x0A, 0
 
-;-------------------------------------------------------------------------
-; BSS Section: Global Variables and Request Buffer
-;-------------------------------------------------------------------------
+; A buffer for our CreateWindow request
+; We use a minimal CreateWindow request that fits the following format:
+;   Byte  0: Major opcode = 1 (CreateWindow)
+;   Byte  1: Depth (0 means “CopyFromParent”)
+;   Bytes 2-3: Request length in 4-byte units (here: 8 → 8*4 = 32 bytes total)
+;   Bytes 4-7: Window ID (our chosen new window ID; here 0x200000)
+;   Bytes 8-11: Parent window (assumed to be the root; e.g. 0x20)
+;   Bytes 12-13: X coordinate (0)
+;   Bytes 14-15: Y coordinate (0)
+;   Bytes 16-17: Width (800)
+;   Bytes 18-19: Height (600)
+;   Bytes 20-21: Border width (0)
+;   Bytes 22-23: Class (1 for InputOutput)
+;   Bytes 24-27: Visual (0 means “CopyFromParent”)
+;   Bytes 28-31: Value mask (0 for no extra attributes)
 section .bss
-    ; These variables must be initialized before calling create_window:
-    sock_fd                  resq 1  ; The connected socket file descriptor.
-    window_id_placeholder    resd 1  ; New window ID.
-    root_window_placeholder  resd 1  ; Root window ID from the X11 setup reply.
-    visual_id_placeholder    resd 1  ; Default visual ID from the X11 setup reply.
+    cw_req resb 32      ; Reserve 32 bytes for the CreateWindow request
 
-    ; Buffer for the CreateWindow request (we use 32 bytes)
-    create_window_req        resb 32
-
-;-------------------------------------------------------------------------
-; Text Section: The create_window Routine
-;-------------------------------------------------------------------------
 section .text
-
-; create_window: Entry point to construct and send the CreateWindow request.
-; The CreateWindow request (simplified) is constructed as follows:
-;  Offset  Field                  Size    Description
-;   0      reqType                1       (1 for CreateWindow)
-;   1      depth                  1       (0 for CopyFromParent)
-;   2      request length         2       (in 4-byte units; here 8 = 32 bytes)
-;   4      window id              4       (our new window ID)
-;   8      parent window id       4       (the root window ID)
-;  12      x position             2       (we use 0)
-;  14      y position             2       (we use 0)
-;  16      width                  2       (e.g., 640)
-;  18      height                 2       (e.g., 480)
-;  20      border width           2       (e.g., 1)
-;  22      class                  2       (1 for InputOutput)
-;  24      visual id              4       (the visual ID)
-;  28      padding                4       (zeros to pad to 32 bytes)
 create_window:
-    ;--- Build the CreateWindow Request in create_window_req ---
-    ; Byte 0: reqType = 1 (CreateWindow)
-    mov byte [create_window_req], 1
+    ; Log that we are about to create the window.
+    mov rdi, creating_window
+    call print
 
-    ; Byte 1: depth = 0 (CopyFromParent)
-    mov byte [create_window_req+1], 0
+    ; --- Build the CreateWindow request ---
+    ; Byte 0: Major opcode (CreateWindow). X11’s CreateWindow opcode is 1.
+    mov byte [cw_req], 1
 
-    ; Bytes 2-3: request length = 8 (i.e. 32 bytes total)
-    mov word [create_window_req+2], 8
+    ; Byte 1: Depth (0 = CopyFromParent)
+    mov byte [cw_req+1], 0
 
-    ; Bytes 4-7: window id (from our placeholder)
-    mov eax, [window_id_placeholder]
-    mov dword [create_window_req+4], eax
+    ; Bytes 2-3: Request length in 4-byte units (8 for 32 bytes).
+    mov word [cw_req+2], 8
 
-    ; Bytes 8-11: parent window id (from placeholder, i.e. the root window)
-    mov eax, [root_window_placeholder]
-    mov dword [create_window_req+8], eax
+    ; Bytes 4-7: New window ID (here we hardcode 0x200000).
+    mov dword [cw_req+4], 0x200000
 
-    ; Bytes 12-13: x position = 0
-    mov word [create_window_req+12], 0
-    ; Bytes 14-15: y position = 0
-    mov word [create_window_req+14], 0
+    ; Bytes 8-11: Parent window ID (for simplicity, using a placeholder value, e.g. 0x20).
+    mov dword [cw_req+8], 0x20
 
-    ; Bytes 16-17: width = 640 (you can change this value)
-    mov word [create_window_req+16], 640
-    ; Bytes 18-19: height = 480
-    mov word [create_window_req+18], 480
+    ; Bytes 12-13: X coordinate (0)
+    mov word [cw_req+12], 0
 
-    ; Bytes 20-21: border width = 1
-    mov word [create_window_req+20], 1
+    ; Bytes 14-15: Y coordinate (0)
+    mov word [cw_req+14], 0
 
-    ; Bytes 22-23: class = InputOutput (1)
-    mov word [create_window_req+22], 1
+    ; Bytes 16-17: Width (800). Decimal 800 = 0x320.
+    mov word [cw_req+16], 800
 
-    ; Bytes 24-27: visual id (from placeholder)
-    mov eax, [visual_id_placeholder]
-    mov dword [create_window_req+24], eax
+    ; Bytes 18-19: Height (600). Decimal 600 = 0x258.
+    mov word [cw_req+18], 600
 
-    ; Bytes 28-31: padding (set to 0)
-    mov dword [create_window_req+28], 0
+    ; Bytes 20-21: Border width (0)
+    mov word [cw_req+20], 0
 
-    ;--- Send the CreateWindow request over the already established socket ---
-    ; We use the sys_send syscall (number 44 on Linux x86-64)
-    ; Syscall arguments:
-    ;   rax = 44 (sys_send)
-    ;   rdi = socket FD
-    ;   rsi = pointer to request buffer
-    ;   rdx = length of request (32 bytes)
-    mov rax, 44
-    mov rdi, [sock_fd]    ; load the socket FD
-    lea rsi, [create_window_req]
-    mov rdx, 32
-    syscall
+    ; Bytes 22-23: Class (1 for InputOutput)
+    mov word [cw_req+22], 1
 
-    ;--- Optionally print a confirmation message ---
-    mov rdi, window_created_msg
+    ; Bytes 24-27: Visual (0 = CopyFromParent)
+    mov dword [cw_req+24], 0
+
+    ; Bytes 28-31: Value mask (0, meaning no additional attributes)
+    mov dword [cw_req+28], 0
+
+    ; --- Send the CreateWindow request ---
+    ; We use the send syscall to write the request over the socket.
+    ; Syscall details for send:
+    ;   rax: 44          (syscall number for send)
+    ;   rdi: Socket FD   (here loaded from our global x11_sockfd)
+    ;   rsi: Pointer to buffer (cw_req)
+    ;   rdx: Buffer length (32 bytes)
+    mov rax, 44            ; syscall: send
+    mov rdi, [x11_sockfd]  ; load the connected socket file descriptor
+    lea rsi, [cw_req]      ; pointer to our request buffer
+    mov rdx, 32            ; length of our CreateWindow request
+    syscall                ; perform the send syscall
+
+    ; (Optional: check return value in rax for error handling.)
+
+    ; Log that the window was “created”.
+    mov rdi, window_created
     call print
 
     ret

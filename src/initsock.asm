@@ -25,8 +25,11 @@ section .bss
     response resb 32
     sockaddr resb 110
     response_buffer resb 16
+    x11_sockfd resq 1
 
 section .text
+
+global x11_sockfd
 
 initsock:
     mov rdi, opening
@@ -65,6 +68,8 @@ initsock:
 
     mov rdi, connected
     call print
+
+    mov [x11_sockfd], rax
 
     mov rdi, sending
     call print
