@@ -1,7 +1,7 @@
 bits 64
 extern print
 extern initsock
-;extern create_window
+extern create_window
 global exit
 
 section .data
@@ -17,7 +17,7 @@ _start:
     call print
     call initsock
 
-    ;call create_window
+    call create_window
     ;call window_loop
 
     call exit
