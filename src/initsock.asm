@@ -4,6 +4,7 @@ extern print
 extern exit
 
 section .data
+    ; Messages for printing
     opening db 'Opening a socket...', 0x0A, 0
     opened db 'Socket opened!', 0x0A, 0
     connecting db 'Connecting to X11 server...', 0x0A, 0
@@ -16,6 +17,7 @@ section .data
     connect_error_msg db 'Error connecting to X11!', 0x0A, 0
     handshake_error_msg db 'Error with handshake!', 0x0A, 0
 
+    ; Path to the X11 server
     x11_socket_path db "/tmp/.X11-unix/X0", 0  ; Null-terminated path
 
     ; X11 Handshake request (Big Endian format)
@@ -40,7 +42,7 @@ initsock:
     mov rsi, 1       ; SOCK_STREAM (Type)
     mov rdx, 0       ; Protocol 0
     syscall
-    test rax, rax
+    test rax, rax ; Check for errors
     js _error_socket
     mov r12, rax     ; Store socket FD
 
@@ -62,12 +64,13 @@ initsock:
     lea rsi, [sockaddr]
     mov rdx, 110     ; sockaddr size
     syscall
-    test rax, rax
+    test rax, rax ; Did we actually connect?
     js _connect_error
 
     mov rdi, connected
     call print
 
+    ; Put rax into the socket
     mov [x11_sockfd], rax
 
     mov rdi, sending

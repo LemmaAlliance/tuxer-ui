@@ -15,8 +15,11 @@ section .text
 _start:
     mov rdi, welcome
     call print
+
+    ; Initalize the socket & connect to X11
     call initsock
 
+    ; Attempt to create a window
     call create_window
     ;call window_loop
 
