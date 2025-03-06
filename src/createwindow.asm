@@ -12,7 +12,7 @@ extern x11_sockfd
 section .data
     creating_window  db "Creating window...", 0x0A, 0
     window_created   db "Window created.", 0x0A, 0
-    win_err_msg db "Error creating window", 0x0A, 0
+    win_err_msg db "Error creating window!", 0x0A, 0
 
 ; A buffer for our CreateWindow request
 ; We use a minimal CreateWindow request that fits the following format:

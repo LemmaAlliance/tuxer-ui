@@ -4,17 +4,17 @@ extern print
 extern exit
 
 section .data
-    opening db 'Opening a socket.', 0x0A, 0
+    opening db 'Opening a socket...', 0x0A, 0
     opened db 'Socket opened!', 0x0A, 0
-    connecting db 'Connecting to X11 server.', 0x0A, 0
-    connected db 'Connected to the X11 server.', 0x0A, 0
-    sending db 'Sending handshake.', 0x0A, 0
-    sent db 'Handshake sent.', 0x0A, 0
-    receiving db 'Receiving handshake.', 0x0A, 0
-    received db 'Received handshake.', 0x0A, 0
-    socket_error_msg db 'Error with socket.', 0x0A, 0
-    connect_error_msg db 'Error connecting to X11.', 0x0A, 0
-    handshake_error_msg db 'Error with handshake.', 0x0A, 0
+    connecting db 'Connecting to X11 server...', 0x0A, 0
+    connected db 'Connected to the X11 server!', 0x0A, 0
+    sending db 'Sending handshake...', 0x0A, 0
+    sent db 'Handshake sent!', 0x0A, 0
+    receiving db 'Receiving handshake...', 0x0A, 0
+    received db 'Received handshake!', 0x0A, 0
+    socket_error_msg db 'Error with socket!', 0x0A, 0
+    connect_error_msg db 'Error connecting to X11!', 0x0A, 0
+    handshake_error_msg db 'Error with handshake!', 0x0A, 0
 
     x11_socket_path db "/tmp/.X11-unix/X0", 0  ; Null-terminated path
 
