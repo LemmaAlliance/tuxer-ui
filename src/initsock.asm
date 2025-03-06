@@ -18,7 +18,7 @@ section .data
     handshake_error_msg db 'Error with handshake!', 0x0A, 0
 
     ; Path to the X11 server
-    x11_socket_path db "/tmp/.X11-unix/X1", 0  ; Null-terminated path
+    x11_socket_path db "/tmp/.X11-unix/X2", 0  ; Null-terminated path
 
     ; X11 Handshake request (Big Endian format)
     handshake_request db 0x6C, 0x00, 0x00, 0x00, 0x11, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x12, 0x34, 0x56, 0x78
