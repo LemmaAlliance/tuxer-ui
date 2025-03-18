@@ -6,10 +6,12 @@ An incredibly lightweight library for the [tuxer](https://github.com/LemmaAllian
 
 Progress has slowed, I am currently writing the script to open the window.
 I have written code to connect to X11, send & recieve handshakes. I am yet to verify the handshake, but no errors are thrown. <br />
+### Sections:
 ✔️ | Opened socket<br />
 ✔️ | Sent handshake - Needs verifying<br />
 ✔️ | Recieved handshake - Needs verifying<br />
-⭕ | Call create window<br />
+✔️ | Build args for create window<br />
+⭕ | Call create window - needs verifying<br />
 ⭕ | Get root window ID<br />
 ⭕ | Turn this from a project to a package<br />
 
