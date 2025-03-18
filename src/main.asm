@@ -7,6 +7,7 @@ global exit
 section .data
     welcome db 'Welcome to the tuxer-ui software', 0x0A, 0
     exiting db 'Exiting software...', 0x0A, 0
+    loop_error db 'Error in loop!', 0x0A, 0
 
 section .text
     global _start
@@ -31,7 +32,16 @@ window_loop:
     mov rsi, 0
     mov rdx, 0
     syscall
+
+    test rax, rax
+    js _loop_error
+
     jmp window_loop
+
+_loop_error:
+    mov rdi, loop_error
+    call print
+    call exit
 
 exit:
     mov rdi, exiting
