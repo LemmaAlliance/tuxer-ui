@@ -1,7 +1,3 @@
-; create_window.asm
-; This snippet builds an X11 CreateWindow request and sends it using the send syscall.
-; For simplicity, many X11 details are hardcoded or simplified.
-
 bits 64
 global create_window
 extern print
@@ -13,6 +9,8 @@ section .data
     creating_window  db "Creating window...", 0x0A, 0
     window_created   db "Window created.", 0x0A, 0
     win_err_msg db "Error creating window!", 0x0A, 0
+    get_root_window db "Getting root window ID...", 0x0A, 0
+    root_window_err db "Error getting root window ID!", 0x0A, 0
 
 ; A buffer for our CreateWindow request
 ; We use a minimal CreateWindow request that fits the following format:
@@ -31,9 +29,54 @@ section .data
 ;   Bytes 28-31: Value mask (0 for no extra attributes)
 section .bss
     cw_req resb 32      ; Reserve 32 bytes for the CreateWindow request
+    root_window_id resd 1 ; Reserve 4 bytes for the root window ID
 
 section .text
 create_window:
+    ; Log that we are about to get the root window ID.
+    mov rdi, get_root_window
+    call print
+
+    ; --- Build the GetGeometry request ---
+    ; Byte 0: Major opcode (GetGeometry). X11’s GetGeometry opcode is 14.
+    ; Byte 1: Unused (0)
+    ; Bytes 2-3: Request length in 4-byte units (2 for 8 bytes).
+    ; Bytes 4-7: Drawable (root window ID placeholder, e.g. 0x20).
+    mov byte [cw_req], 14
+    mov byte [cw_req+1], 0
+    mov word [cw_req+2], 2
+    mov dword [cw_req+4], 0x20
+
+    ; --- Send the GetGeometry request ---
+    mov rax, 44            ; syscall: send
+    mov rdi, [x11_sockfd]  ; load the connected socket file descriptor
+    lea rsi, [cw_req]      ; pointer to our request buffer
+    mov rdx, 8             ; length of our GetGeometry request
+    syscall                ; perform the send syscall
+
+    test rax, rax
+    js _root_window_error
+
+    ; --- Receive the GetGeometry reply ---
+    ; We use the recv syscall to read the reply from the socket.
+    ; Syscall details for recv:
+    ;   rax: 45          (syscall number for recv)
+    ;   rdi: Socket FD   (here loaded from our global x11_sockfd)
+    ;   rsi: Pointer to buffer (cw_req)
+    ;   rdx: Buffer length (32 bytes)
+    mov rax, 45            ; syscall: recv
+    mov rdi, [x11_sockfd]  ; load the connected socket file descriptor
+    lea rsi, [cw_req]      ; pointer to our request buffer
+    mov rdx, 32            ; length of our receive buffer
+    syscall                ; perform the recv syscall
+
+    test rax, rax
+    js _root_window_error
+
+    ; Extract the root window ID from the reply (bytes 8-11).
+    mov eax, [cw_req+8]
+    mov [root_window_id], eax
+
     ; Log that we are about to create the window.
     mov rdi, creating_window
     call print
@@ -51,8 +94,9 @@ create_window:
     ; Bytes 4-7: New window ID (here we hardcode 0x200000).
     mov dword [cw_req+4], 0x200000
 
-    ; Bytes 8-11: Parent window ID (for simplicity, using a placeholder value, e.g. 0x20).
-    mov dword [cw_req+8], 0x20
+    ; Bytes 8-11: Parent window ID (use the retrieved root window ID).
+    mov eax, [root_window_id]
+    mov dword [cw_req+8], eax
 
     ; Bytes 12-13: X coordinate (0)
     mov word [cw_req+12], 0
@@ -79,12 +123,6 @@ create_window:
     mov dword [cw_req+28], 0
 
     ; --- Send the CreateWindow request ---
-    ; We use the send syscall to write the request over the socket.
-    ; Syscall details for send:
-    ;   rax: 44          (syscall number for send)
-    ;   rdi: Socket FD   (here loaded from our global x11_sockfd)
-    ;   rsi: Pointer to buffer (cw_req)
-    ;   rdx: Buffer length (32 bytes)
     mov rax, 44            ; syscall: send
     mov rdi, [x11_sockfd]  ; load the connected socket file descriptor
     lea rsi, [cw_req]      ; pointer to our request buffer
@@ -99,6 +137,11 @@ create_window:
     call print
 
     ret
+
+_root_window_error:
+    mov rdi, root_window_err
+    call print
+    call exit
 
 _win_error:
     mov rdi, win_err_msg
