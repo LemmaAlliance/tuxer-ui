@@ -22,4 +22,21 @@ For debian based systems:
 sudo apt update
 sudo apt install gcc binutils nasm
 ```
+
+Makefile commands:
+```bash
+# Install dependencies
+make deps
+
+# Compile
+make
+
+# Run the binary
+make run
+
+# Clean the build directory
+make clean
+```
+Please note that you should never push with an empty build directory
+
 Then you are ready to begin programming!

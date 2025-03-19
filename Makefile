@@ -16,6 +16,11 @@ OUTPUT = $(BUILD_DIR)/main
 # Default target
 all: $(OUTPUT)
 
+# Install dependencies
+deps:
+	@echo "Installing dependencies..."
+	@sudo apt-get update && sudo apt-get install -y nasm gcc
+
 # Compile assembly files into object files
 $(BUILD_DIR)/%.o: $(SRC_DIR)/%.asm
 	@mkdir -p $(BUILD_DIR)
@@ -36,4 +41,4 @@ clean:
 	rm -rf $(BUILD_DIR)
 
 # Phony targets
-.PHONY: all run clean
+.PHONY: all run clean deps
