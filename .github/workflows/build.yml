@@ -23,11 +23,9 @@ jobs:
 
       - name: Install dependencies (nasm & binutils)
         run: |
-          sudo apt update
-          sudo apt install -y binutils nasm gcc
+          make deps
 
       - name: Run build script
         run: |
-          chmod +x ./build.sh
-          ./build.sh
+          make
         continue-on-error: false
