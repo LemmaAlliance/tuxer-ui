@@ -1,5 +1,9 @@
 name: Build Project
 
+permissions:
+  contents: read
+  pull-requests: write
+
 on:
   push:
     branches:
@@ -17,7 +21,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v2
 
-      - name: Install dependencies (nasm & binitils)
+      - name: Install dependencies (nasm & binutils)
         run: |
           sudo apt update
           sudo apt install -y binutils nasm gcc
