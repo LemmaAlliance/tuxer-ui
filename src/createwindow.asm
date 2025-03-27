@@ -4,6 +4,10 @@ extern print
 extern exit
 extern x11_sockfd
 
+%define OPCODE_CREATE_WINDOW 1
+%define OPCODE_GET_GEOMETRY 14
+%define NEW_WINDOW_ID 0x200000
+
 ; Data messages for logging
 section .data
     creating_window  db "Creating window...", 0x0A, 0
@@ -27,7 +31,7 @@ section .data
 ;   Bytes 22-23: Class (1 for InputOutput)
 ;   Bytes 24-27: Visual (0 means “CopyFromParent”)
 ;   Bytes 28-31: Value mask (0 for no extra attributes)
-section .bss
+section .bss align=4
     cw_req resb 32      ; Reserve 32 bytes for the CreateWindow request
     root_window_id resd 1 ; Reserve 4 bytes for the root window ID
 
@@ -48,14 +52,12 @@ create_window:
     mov dword [cw_req+4], 0x20
 
     ; --- Send the GetGeometry request ---
-    mov rax, 44            ; syscall: send
-    mov rdi, [x11_sockfd]  ; load the connected socket file descriptor
-    lea rsi, [cw_req]      ; pointer to our request buffer
-    mov rdx, 8             ; length of our GetGeometry request
-    syscall                ; perform the send syscall
+    jmp send_request
 
     test rax, rax
     js _root_window_error
+    cmp rax, 32
+    jl _root_window_error
 
     ; --- Receive the GetGeometry reply ---
     ; We use the recv syscall to read the reply from the socket.
@@ -75,6 +77,12 @@ create_window:
 
     ; Extract the root window ID from the reply (bytes 8-11).
     mov eax, [cw_req+8]
+    mov [root_window_id], eax
+
+    ; Check if the root window ID is valid (non-zero).
+    mov eax, [cw_req+8]
+    test eax, eax
+    jz _root_window_error
     mov [root_window_id], eax
 
     ; Log that we are about to create the window.
@@ -136,6 +144,18 @@ create_window:
     mov rdi, window_created
     call print
 
+    ret
+
+send_request:
+    mov rax, 44            ; syscall: send
+    mov rdi, [x11_sockfd]  ; load the connected socket file descriptor
+    lea rsi, [cw_req]      ; pointer to our request buffer
+    mov rdx, 32            ; length of our CreateWindow request
+    syscall
+    test rax, rax
+    js _win_error
+    cmp rax, 32
+    jne send_request       ; Retry if not all bytes were sent
     ret
 
 _root_window_error:
