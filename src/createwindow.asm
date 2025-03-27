@@ -4,10 +4,6 @@ extern print
 extern exit
 extern x11_sockfd
 
-%define OPCODE_CREATE_WINDOW 1
-%define OPCODE_GET_GEOMETRY 14
-%define NEW_WINDOW_ID 0x200000
-
 ; Data messages for logging
 section .data
     creating_window  db "Creating window...", 0x0A, 0
@@ -34,6 +30,7 @@ section .data
 section .bss align=4
     cw_req resb 32      ; Reserve 32 bytes for the CreateWindow request
     root_window_id resd 1 ; Reserve 4 bytes for the root window ID
+    last_window_id resd 1 ; Reserve 4 bytes for the last window ID
 
 section .text
 create_window:
@@ -42,6 +39,16 @@ create_window:
     call print
 
     jmp query_tree
+
+    ; --- Get a free window ID ---
+    ; Initialize the last window ID to 0x200000.
+    mov dword [last_window_id], 0x200000
+
+    ; Generate a new window ID by incrementing the last one.
+    mov eax, [last_window_id]
+    add eax, 1
+    mov [last_window_id], eax
+    mov dword [cw_req+4], eax
 
     ; Log that we are about to create the window.
     mov rdi, creating_window
@@ -128,6 +135,7 @@ query_tree:
     syscall                ; perform the recv syscall
     test rax, rax
     js _root_window_error
+    ret
 
     ; Extract the root window ID from the reply (bytes 8-11).
     mov eax, [cw_req+8]
