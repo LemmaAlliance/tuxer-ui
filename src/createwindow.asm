@@ -41,49 +41,7 @@ create_window:
     mov rdi, get_root_window
     call print
 
-    ; --- Build the GetGeometry request ---
-    ; Byte 0: Major opcode (GetGeometry). X11’s GetGeometry opcode is 14.
-    ; Byte 1: Unused (0)
-    ; Bytes 2-3: Request length in 4-byte units (2 for 8 bytes).
-    ; Bytes 4-7: Drawable (root window ID placeholder, e.g. 0x20).
-    mov byte [cw_req], 14
-    mov byte [cw_req+1], 0
-    mov word [cw_req+2], 2
-    mov dword [cw_req+4], 0x20
-
-    ; --- Send the GetGeometry request ---
-    jmp send_request
-
-    test rax, rax
-    js _root_window_error
-    cmp rax, 32
-    jl _root_window_error
-
-    ; --- Receive the GetGeometry reply ---
-    ; We use the recv syscall to read the reply from the socket.
-    ; Syscall details for recv:
-    ;   rax: 45          (syscall number for recv)
-    ;   rdi: Socket FD   (here loaded from our global x11_sockfd)
-    ;   rsi: Pointer to buffer (cw_req)
-    ;   rdx: Buffer length (32 bytes)
-    mov rax, 45            ; syscall: recv
-    mov rdi, [x11_sockfd]  ; load the connected socket file descriptor
-    lea rsi, [cw_req]      ; pointer to our request buffer
-    mov rdx, 32            ; length of our receive buffer
-    syscall                ; perform the recv syscall
-
-    test rax, rax
-    js _root_window_error
-
-    ; Extract the root window ID from the reply (bytes 8-11).
-    mov eax, [cw_req+8]
-    mov [root_window_id], eax
-
-    ; Check if the root window ID is valid (non-zero).
-    mov eax, [cw_req+8]
-    test eax, eax
-    jz _root_window_error
-    mov [root_window_id], eax
+    jmp query_tree
 
     ; Log that we are about to create the window.
     mov rdi, creating_window
@@ -145,6 +103,37 @@ create_window:
     call print
 
     ret
+
+query_tree:
+    ; --- Build the QueryTree request ---
+    mov byte [cw_req], 15
+    mov byte [cw_req+1], 0
+    mov word [cw_req+2], 2
+    mov dword [cw_req+4], 0
+
+    ; --- Send the QueryTree request ---
+    mov rax, 44            ; syscall: send
+    mov rdi, [x11_sockfd]  ; load the connected socket file descriptor
+    lea rsi, [cw_req]      ; pointer to our request buffer
+    mov rdx, 8            ; length of our QueryTree request
+    syscall                ; perform the send syscall
+    test rax, rax
+    js _root_window_error
+
+    ; --- Receive the QueryTree reply ---
+    mov rax, 45            ; syscall: recv
+    mov rdi, [x11_sockfd]  ; load the connected socket file descriptor
+    lea rsi, [cw_req]      ; pointer to our request buffer
+    mov rdx, 32            ; length of our receive buffer
+    syscall                ; perform the recv syscall
+    test rax, rax
+    js _root_window_error
+
+    ; Extract the root window ID from the reply (bytes 8-11).
+    mov eax, [cw_req+8]
+    mov [root_window_id], eax
+    test eax, eax
+    jz _root_window_error
 
 send_request:
     mov rax, 44            ; syscall: send
