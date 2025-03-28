@@ -14,6 +14,13 @@ section .data
     query_tree_rcv_err db "Error receiving QueryTree reply!", 0x0A, 0
     root_window_err db "Error getting root window ID!", 0x0A, 0
 
+section .bss align=4
+    ; Do not exeed 32 bytes for cw_req EVER!!!!
+    cw_req resb 32      ; Reserve 32 bytes for the CreateWindow request
+    root_window_id resd 1 ; Reserve 4 bytes for the root window ID
+    last_window_id resd 1 ; Reserve 4 bytes for the last window ID
+
+section .text
 ; A buffer for our CreateWindow request
 ; We use a minimal CreateWindow request that fits the following format:
 ;   Byte  0: Major opcode = 1 (CreateWindow)
@@ -29,13 +36,6 @@ section .data
 ;   Bytes 22-23: Class (1 for InputOutput)
 ;   Bytes 24-27: Visual (0 means “CopyFromParent”)
 ;   Bytes 28-31: Value mask (0 for no extra attributes)
-section .bss align=4
-    ; Do not exeed 32 bytes for cw_req EVER!!!!
-    cw_req resb 32      ; Reserve 32 bytes for the CreateWindow request
-    root_window_id resd 1 ; Reserve 4 bytes for the root window ID
-    last_window_id resd 1 ; Reserve 4 bytes for the last window ID
-
-section .text
 create_window:
     ; Log that we are about to get the root window ID.
     mov rdi, get_root_window
