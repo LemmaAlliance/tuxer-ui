@@ -2,6 +2,7 @@ bits 64
 global initsock
 extern print
 extern exit
+extern exit_err
 
 section .data
     ; Messages for printing
@@ -119,17 +120,17 @@ recv_handshake_response:
 _error_socket:
     mov rdi, socket_error_msg
     call print
-    call exit
+    call exit_err
 
 _connect_error:
     mov rdi, connect_error_msg
     call print
-    call exit
+    call exit_err
 
 _error_handshake:
     mov rdi, handshake_error_msg
     call print
-    call exit
+    call exit_err
 
 strcpy:
     ; rdi = destination

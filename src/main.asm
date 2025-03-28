@@ -3,6 +3,7 @@ extern print
 extern initsock
 extern create_window
 global exit
+global exit_err
 
 section .data
     welcome db 'Welcome to the tuxer-ui software', 0x0A, 0
@@ -48,4 +49,11 @@ exit:
     call print
     mov rax, 60
     mov rdi, 0
+    syscall
+
+exit_err:
+    mov rdi, exiting
+    call print
+    mov rax, 60
+    mov rdi, -1
     syscall

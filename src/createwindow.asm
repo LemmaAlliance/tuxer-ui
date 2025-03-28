@@ -2,6 +2,7 @@ bits 64
 global create_window
 extern print
 extern exit
+extern exit_err
 extern x11_sockfd
 
 ; Data messages for logging + other stuff
@@ -187,17 +188,17 @@ send_request:
 _query_tree_send_error:
     mov rdi, query_tree_snd_err
     call print
-    call exit
+    call exit_err
 
 _query_tree_receive_error:
     mov rdi, query_tree_rcv_err
     call print
-    call exit
+    call exit_err
 
 _root_window_error:
     mov rdi, root_window_err
     call print
-    call exit
+    call exit_err
 
 _win_error:
     mov rdi, rax
@@ -205,4 +206,4 @@ _win_error:
     mov rdi, win_err_msg
     call print
     mov rax, -1
-    call exit
+    call exit_err
