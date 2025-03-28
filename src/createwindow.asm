@@ -6,6 +6,8 @@ extern x11_sockfd
 
 ; Data messages for logging
 section .data
+    window_width dw 800
+    window_height dw 600
     creating_window  db "Creating window...", 0x0A, 0
     window_created   db "Window created.", 0x0A, 0
     win_err_msg db "Error creating window!", 0x0A, 0
@@ -86,10 +88,12 @@ create_window:
     mov word [cw_req+14], 0
 
     ; Bytes 16-17: Width (800). Decimal 800 = 0x320.
-    mov word [cw_req+16], 800
+    mov ax, [window_width]
+    mov word [cw_req+16], ax
 
     ; Bytes 18-19: Height (600). Decimal 600 = 0x258.
-    mov word [cw_req+18], 600
+    mov ax, [window_height]
+    mov word [cw_req+18], ax
 
     ; Bytes 20-21: Border width (0)
     mov word [cw_req+20], 0
@@ -117,6 +121,7 @@ create_window:
     mov rdi, window_created
     call print
 
+    xor rax, rax
     ret
 
 query_tree:
@@ -127,6 +132,7 @@ query_tree:
     mov dword [cw_req+4], 0
 
     ; --- Send the QueryTree request ---
+    ; Yes I know it is duplicated logic, but I can't be bothered.
     mov rax, 44            ; syscall: send
     mov rdi, [x11_sockfd]  ; load the connected socket file descriptor
     lea rsi, [cw_req]      ; pointer to our request buffer
@@ -194,8 +200,9 @@ _root_window_error:
     call exit
 
 _win_error:
-    mov rdi, win_err_msg
-    call print
     mov rdi, rax
     call print
+    mov rdi, win_err_msg
+    call print
+    mov rax, -1
     call exit
