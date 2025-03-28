@@ -43,8 +43,12 @@ create_window:
     call query_tree
 
     ; --- Get a free window ID ---
-    ; Initialize the last window ID to 0x200000.
+    ; Initialize the last window ID only if it is zero.
+    cmp dword [last_window_id], 0
+    jne .skip_init
+    ; If it is zero, set it to 0x200000.
     mov dword [last_window_id], 0x200000
+    .skip_init:
 
     ; Generate a new window ID by incrementing the last one.
     mov eax, [last_window_id]
@@ -138,6 +142,10 @@ query_tree:
     syscall                ; perform the recv syscall
     test rax, rax
     js _query_tree_receive_error
+
+    ; Check if we received the expected number of bytes (32).
+    cmp rax, 32
+    jne _query_tree_receive_error
 
     ; Extract the root window ID from the reply (bytes 8-11).
     mov eax, [cw_req+8]
