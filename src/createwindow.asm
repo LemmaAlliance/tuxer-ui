@@ -4,7 +4,7 @@ extern print
 extern exit
 extern x11_sockfd
 
-; Data messages for logging
+; Data messages for logging + other stuff
 section .data
     window_width dw 800
     window_height dw 600
