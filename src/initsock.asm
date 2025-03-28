@@ -19,7 +19,10 @@ section .data
     handshake_error_msg db 'Error with handshake!', 0x0A, 0
 
     ; Path to the X11 server
-    x11_socket_path db "/tmp/.X11-unix/X2", 0  ; Null-terminated path
+    ; In the future we will increment the socket number until we find a
+    ; valid one
+    ; For now we will just use X0
+    x11_socket_path db "/tmp/.X11-unix/X0", 0  ; Default socket path
     socket_base_path db "/tmp/.X11-unix/X", 0  ; Base path for X11 sockets
     socket_number db "0", 0  ; Socket number (X0, X1, etc.)
     max_socket_number db "10", 0  ; Maximum socket number (X0 to X9)
