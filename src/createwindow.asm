@@ -30,6 +30,7 @@ section .data
 ;   Bytes 24-27: Visual (0 means “CopyFromParent”)
 ;   Bytes 28-31: Value mask (0 for no extra attributes)
 section .bss align=4
+    ; Do not exeed 32 bytes for cw_req EVER!!!!
     cw_req resb 32      ; Reserve 32 bytes for the CreateWindow request
     root_window_id resd 1 ; Reserve 4 bytes for the root window ID
     last_window_id resd 1 ; Reserve 4 bytes for the last window ID
@@ -162,7 +163,7 @@ send_request:
 .send_loop:
     syscall
     test rax, rax
-    js _win_error
+    js .check_eintr
     cmp rax, rdx
     je .send_done
     add rsi, rax
@@ -170,6 +171,12 @@ send_request:
     jmp .send_loop
 .send_done:
     ret
+
+.check_eintr:
+    mov rdi, rax
+    cmp rdi, -4
+    je .send_loop
+    jmp _win_error
 
 _query_tree_send_error:
     mov rdi, query_tree_snd_err
@@ -188,5 +195,7 @@ _root_window_error:
 
 _win_error:
     mov rdi, win_err_msg
+    call print
+    mov rdi, rax
     call print
     call exit
