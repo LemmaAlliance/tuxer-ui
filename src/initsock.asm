@@ -19,14 +19,9 @@ section .data
     handshake_error_msg db 'Error with handshake!', 0x0A, 0
 
     ; Path to the X11 server
-    ; In the future we will increment the socket number until we find a
-    ; valid one
-    ; For now we will just use X0
     x11_socket_path db "/tmp/.X11-unix/X0", 0  ; Default socket path
     socket_base_path db "/tmp/.X11-unix/X", 0  ; Base path for X11 sockets
-    socket_number db "0", 0  ; Socket number (X0, X1, etc.)
-    max_socket_number db "10", 0  ; Maximum socket number (X0 to X9)
-    socket_path db "/tmp/.X11-unix/X", 0  ; Base path for X11 sockets
+    max_socket_number db 10  ; Maximum socket number (X0 to X9)
 
     ; X11 Handshake request (Big Endian format)
     handshake_request db 0x6C, 0x00, 0x00, 0x00, 0x11, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x12, 0x34, 0x56, 0x78
@@ -59,6 +54,8 @@ initsock:
 
     ; Setup sockaddr_un structure
     mov byte [sockaddr], 1    ; AF_UNIX (Address Family)
+
+.try_next_socket:
     lea rdi, [sockaddr + 2]   ; Pointer to path part
     lea rsi, [x11_socket_path]
     call strcpy               ; Copy the socket path
@@ -73,10 +70,26 @@ initsock:
     mov rdx, 110     ; sockaddr size
     syscall
     test rax, rax ; Did we actually connect?
-    js _connect_error
+    js .increment_socket
 
     mov rdi, connected
     call print
+    jmp .connected_success
+
+.increment_socket:
+    ; Increment the socket number in x11_socket_path
+    mov rsi, x11_socket_path
+    add rsi, 17      ; Offset to the socket number in the path
+    mov al, [rsi]    ; Load current socket number
+    sub al, '0'      ; Convert ASCII to integer
+    inc al           ; Increment the socket number
+    cmp al, [max_socket_number]
+    jge _connect_error ; If we've exceeded max, fail
+    add al, '0'      ; Convert back to ASCII
+    mov [rsi], al    ; Store updated socket number
+    jmp .try_next_socket
+
+.connected_success:
 
     ; Put rax into the socket
     mov [x11_sockfd], rax
