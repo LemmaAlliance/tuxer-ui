@@ -2,7 +2,7 @@
 An incredibly lightweight library for the [tuxer](https://github.com/LemmaAlliance/tuxer) browser, designed to provide an easier way to create windows.
 
 ## Progress
-![30%](https://geps.dev/progress/30)
+![50%](https://geps.dev/progress/50)
 
 Progress has slowed, I am currently writing the script to open the window.
 I have written code to connect to X11, send & recieve handshakes. I am yet to verify the handshake, but no errors are thrown. <br />
