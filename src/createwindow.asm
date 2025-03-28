@@ -10,6 +10,8 @@ section .data
     window_created   db "Window created.", 0x0A, 0
     win_err_msg db "Error creating window!", 0x0A, 0
     get_root_window db "Getting root window ID...", 0x0A, 0
+    query_tree_snd_err db "Error sending QueryTree request!", 0x0A, 0
+    query_tree_rcv_err db "Error receiving QueryTree reply!", 0x0A, 0
     root_window_err db "Error getting root window ID!", 0x0A, 0
 
 ; A buffer for our CreateWindow request
@@ -38,7 +40,7 @@ create_window:
     mov rdi, get_root_window
     call print
 
-    jmp query_tree
+    call query_tree
 
     ; --- Get a free window ID ---
     ; Initialize the last window ID to 0x200000.
@@ -64,8 +66,9 @@ create_window:
     ; Bytes 2-3: Request length in 4-byte units (8 for 32 bytes).
     mov word [cw_req+2], 8
 
-    ; Bytes 4-7: New window ID (here we hardcode 0x200000).
-    mov dword [cw_req+4], 0x200000
+    ; Bytes 4-7: New window ID (here we use our ID).
+    mov eax, [last_window_id]
+    mov dword [cw_req+4], eax
 
     ; Bytes 8-11: Parent window ID (use the retrieved root window ID).
     mov eax, [root_window_id]
@@ -125,7 +128,7 @@ query_tree:
     mov rdx, 8            ; length of our QueryTree request
     syscall                ; perform the send syscall
     test rax, rax
-    js _root_window_error
+    js _query_tree_send_error
 
     ; --- Receive the QueryTree reply ---
     mov rax, 45            ; syscall: recv
@@ -134,26 +137,41 @@ query_tree:
     mov rdx, 32            ; length of our receive buffer
     syscall                ; perform the recv syscall
     test rax, rax
-    js _root_window_error
-    ret
+    js _query_tree_receive_error
 
     ; Extract the root window ID from the reply (bytes 8-11).
     mov eax, [cw_req+8]
     mov [root_window_id], eax
     test eax, eax
     jz _root_window_error
+    ret
 
 send_request:
     mov rax, 44            ; syscall: send
     mov rdi, [x11_sockfd]  ; load the connected socket file descriptor
     lea rsi, [cw_req]      ; pointer to our request buffer
     mov rdx, 32            ; length of our CreateWindow request
+.send_loop:
     syscall
     test rax, rax
     js _win_error
-    cmp rax, 32
-    jne send_request       ; Retry if not all bytes were sent
+    cmp rax, rdx
+    je .send_done
+    add rsi, rax
+    sub rdx, rax
+    jmp .send_loop
+.send_done:
     ret
+
+_query_tree_send_error:
+    mov rdi, query_tree_snd_err
+    call print
+    call exit
+
+_query_tree_receive_error:
+    mov rdi, query_tree_rcv_err
+    call print
+    call exit
 
 _root_window_error:
     mov rdi, root_window_err
