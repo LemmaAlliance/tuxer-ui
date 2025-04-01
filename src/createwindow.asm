@@ -185,6 +185,28 @@ send_request:
     je .send_loop
     jmp _win_error
 
+set_window_hints:
+    ; -- Set _WN_WINDOW_TYPE to _WN_WINDOW_TYPE_NORMAL --
+    ; Atom for _NET_WM_WINDOW_TYPE
+    mov rax, 44           ; syscall: send
+    mov rdi, [x11_sockfd] ; load the connected socket file descriptor
+    lea rsi, [cw_req]     ; pointer to our request buffer
+
+    ; Build the ChangeProperty request
+
+    ; Byte 0: Major opcode (ChangeProperty). X11’s ChangeProperty opcode is 18.
+    mov byte [cw_req], 18 ; Major opcode for ChangeProperty
+
+    ; Byte 1: Mode (0 = Replace)
+    mov byte [cw_req+1], 0
+
+    ; Bytes 2-3: Request length in 4-byte units (8 for 32 bytes).
+    mov word [cw_req+2], 5
+
+    ; Bytes 4-7: Window ID (our chosen new window ID; here 0x200000)
+    mov eax, [last_window_id]
+
+
 _query_tree_send_error:
     mov rdi, query_tree_snd_err
     call print

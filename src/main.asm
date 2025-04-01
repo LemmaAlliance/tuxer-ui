@@ -23,7 +23,7 @@ _start:
 
     ; Attempt to create a window
     call create_window
-    ;call window_loop
+    call window_loop
 
     call exit
 
