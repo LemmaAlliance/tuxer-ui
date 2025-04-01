@@ -205,6 +205,10 @@ set_window_hints:
 
     ; Bytes 4-7: Window ID (our chosen new window ID; here 0x200000)
     mov eax, [last_window_id]
+    mov dword [cw_req+4], eax
+
+    ; Bytes 8-11: Property (atom for _NET_WM_WINDOW_TYPE)
+    mov dword [cw_req+8], _NET_WM_WINDOW_TYPE ; Placeholder for the atom
 
 
 _query_tree_send_error:
