@@ -210,6 +210,14 @@ set_window_hints:
     ; Bytes 8-11: Property (atom for _NET_WM_WINDOW_TYPE)
     mov dword [cw_req+8], _NET_WM_WINDOW_TYPE ; Placeholder for the atom
 
+    ; Bytes 12-15: Type (atom for _NET_WM_WINDOW_TYPE)
+    mov dword [cw_req+12], ATOM
+
+    ; Bytes 16-19: Format (32 bits)
+    mov dword [cw_req+16], 32
+
+    ; Bytes 20-23
+
 
 _query_tree_send_error:
     mov rdi, query_tree_snd_err
