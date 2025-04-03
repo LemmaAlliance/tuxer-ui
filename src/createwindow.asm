@@ -217,6 +217,23 @@ set_window_hints:
     mov dword [cw_req+16], 32
 
     ; Bytes 20-23
+    mov dword [cw_req+20], _NET_WM_WINDOW_TYPE_NORMAL
+
+    ; Send the ChangeProperty request
+    mov rdx, 24           ; length of our ChangeProperty request
+    syscall
+
+    ; --- Set WM_PROTOCOLS and WM_DELETE_WINDOW ---
+    ; Atom for WM_PROTOCOLS
+    mov dword [cw_req+8], WM_PROTOCOLS
+
+    ; Atom for WM_DELETE_WINDOW
+    mov dword [cw_req+12], WM_DELETE_WINDOW
+
+    ; Send the ChangeProperty request
+    syscall
+
+    ret
 
 
 _query_tree_send_error:
