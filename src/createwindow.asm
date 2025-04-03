@@ -55,7 +55,8 @@ create_window:
     call print
 
     call query_tree
-    test dword [root_window_id], [root_window_id]
+    mov eax, [root_window_id]
+    test eax, eax
     jz _root_window_error
 
     ; --- Get a free window ID ---
@@ -242,7 +243,8 @@ intern_atom:
     mov byte [cw_req], 16 ; Major opcode for InternAtom
     mov byte [cw_req+1], 0 ; Only one atom is requested
     mov word [cw_req+2], 2 ; Request length in 4-byte units (2 for 8 bytes)
-    mov word [cw_req+4], rsi
+    mov ax, si
+    mov word [cw_req+4], ax
     mov word [cw_req+6], 0 ; Only one atom is requested
     lea rax, [cw_req+8] ; Pointer to the atom name
     mov rdi, rdi
@@ -256,7 +258,8 @@ intern_atom:
     mov rax, 44            ; syscall: send
     mov rdi, [x11_sockfd]  ; load the connected socket file descriptor
     lea rsi, [cw_req]      ; pointer to our request buffer
-    mov rdx, 8 + rcx ; length of our InternAtom request
+    add rcx, 8 ; Adjust length to include the atom name
+    mov rdx, rcx ; length of our InternAtom request
     syscall                ; perform the send syscall
     test rax, rax
     js _win_error
