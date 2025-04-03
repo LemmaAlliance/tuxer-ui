@@ -22,6 +22,10 @@ _start:
     call initsock
 
     ; Attempt to create a window
+    mov rdi, 0
+    mov rsi, 0
+    mov rdx, 800
+    mov rcx, 600
     call create_window
     call window_loop
 

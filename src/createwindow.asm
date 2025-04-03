@@ -50,6 +50,26 @@ section .text
 ;   Bytes 24-27: Visual (0 means “CopyFromParent”)
 ;   Bytes 28-31: Value mask (0 for no extra attributes)
 create_window:
+    ; Arguments:
+    ; rdi: X coordinate
+    ; rsi: Y coordinate
+    ; rdx: Width
+    ; rcx: Height
+
+    ; Set X coordinate
+    mov word [cw_req+12], di
+
+    ; Set Y coordinate
+    mov word [cw_req+14], si
+
+    ; Set Width
+    mov ax, dx
+    mov word [cw_req+16], ax
+
+    ; Set Height
+    mov ax, cx
+    mov word [cw_req+18], ax
+
     ; Log that we are about to get the root window ID.
     mov rdi, get_root_window
     call print
@@ -94,20 +114,6 @@ create_window:
     ; Bytes 8-11: Parent window ID (use the retrieved root window ID).
     mov eax, [root_window_id]
     mov dword [cw_req+8], eax
-
-    ; Bytes 12-13: X coordinate (0)
-    mov word [cw_req+12], 0
-
-    ; Bytes 14-15: Y coordinate (0)
-    mov word [cw_req+14], 0
-
-    ; Bytes 16-17: Width (800). Decimal 800 = 0x320.
-    mov ax, [window_width]
-    mov word [cw_req+16], ax
-
-    ; Bytes 18-19: Height (600). Decimal 600 = 0x258.
-    mov ax, [window_height]
-    mov word [cw_req+18], ax
 
     ; Bytes 20-21: Border width (0)
     mov word [cw_req+20], 0
@@ -226,43 +232,47 @@ recv_request:
     sub rdx, rax           ; Adjust remaining length
     jmp .recv_loop
 .recv_done:
+    ; Verify the response length
+    cmp rdx, 0
+    jne _win_error         ; Error if not all bytes are received
     ret
 
 intern_atom:
     ; Arguments:
     ; rdi: Pointer to the atom name (e.g., "_NET_WM_WINDOW_TYPE")
     ; rsi: Length of the atom name
-    ; rdx: address to store the atom ID
+    ; rdx: Address to store the atom ID
 
     ; -- Build the InternAtom request ---
-    mov byte [cw_req], 16 ; Major opcode for InternAtom
+    mov byte [cw_req], 16  ; Major opcode for InternAtom
     mov byte [cw_req+1], 0 ; Only one atom is requested
     mov word [cw_req+2], 2 ; Request length in 4-byte units (2 for 8 bytes)
-    mov ax, si
-    mov word [cw_req+4], ax
-    mov word [cw_req+6], 0 ; Only one atom is requested
-    lea rax, [cw_req+8] ; Pointer to the atom name
-    mov rdi, rdi
-    mov rcx, rsi ; Length of the atom name
-    lea rdi, [cw_req+8] ; Pointer to the request buffer
-    cmp rsi, 24  ; Ensure atom name fits within the buffer
+
+    ; Ensure the atom name fits within the buffer
+    cmp rsi, 24            ; Atom name must be <= 24 bytes
     ja _win_error
-    rep movsb ; Copy the atom name to the request buffer
+
+    ; Copy the atom name to the request buffer
+    lea rdi, [cw_req+8]    ; Pointer to the request buffer
+    mov rcx, rsi           ; Length of the atom name
+    rep movsb              ; Copy atom name
+
+    ; Adjust the request length to include the atom name
+    add rsi, 8             ; Total length = header (8 bytes) + atom name
+    mov rdx, rsi           ; Length of the InternAtom request
 
     ; -- Send the InternAtom request ---
-    lea rsi, [cw_req]      ; pointer to our request buffer
-    add rcx, 8             ; Adjust length to include the atom name
-    mov rdx, rcx           ; length of our InternAtom request
+    lea rsi, [cw_req]      ; Pointer to the request buffer
     call send_request
 
     ; -- Receive the InternAtom reply ---
-    lea rsi, [cw_req]      ; pointer to our request buffer
-    mov rdx, 32            ; length of our receive buffer
+    lea rsi, [cw_req]      ; Pointer to the receive buffer
+    mov rdx, 32            ; Expected length of the reply
     call recv_request
 
-    ; Extract the atom ID from the reply (bytes 8-11).
+    ; Extract the atom ID from the reply (bytes 8-11)
     mov eax, [cw_req+8]
-    mov [rdx], eax ; Store the atom ID in the provided address
+    mov [rdx], eax         ; Store the atom ID in the provided address
     ret
 
 set_window_hints:
@@ -313,24 +323,26 @@ set_window_hints:
 
     ret
 
+_win_error:
+    mov rdi, win_err_msg
+    call print
+    mov rax, -1
+    call exit_err
 
 _query_tree_send_error:
     mov rdi, query_tree_snd_err
     call print
+    mov rax, -2
     call exit_err
 
 _query_tree_receive_error:
     mov rdi, query_tree_rcv_err
     call print
+    mov rax, -3
     call exit_err
 
 _root_window_error:
     mov rdi, root_window_err
     call print
-    call exit_err
-
-_win_error:
-    mov rdi, win_err_msg
-    call print
-    mov rax, -1
+    mov rax, -4
     call exit_err
