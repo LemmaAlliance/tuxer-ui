@@ -122,14 +122,9 @@ create_window:
     mov dword [cw_req+28], 0
 
     ; --- Send the CreateWindow request ---
-    mov rax, 44            ; syscall: send
-    mov rdi, [x11_sockfd]  ; load the connected socket file descriptor
     lea rsi, [cw_req]      ; pointer to our request buffer
     mov rdx, 32            ; length of our CreateWindow request
-    syscall                ; perform the send syscall
-
-    test rax, rax
-    js _win_error
+    call send_request
 
     ; Log that the window was “created”.
     mov rdi, window_created
@@ -181,27 +176,14 @@ query_tree:
     mov dword [cw_req+4], 0
 
     ; --- Send the QueryTree request ---
-    ; Yes I know it is duplicated logic, but I can't be bothered.
-    mov rax, 44            ; syscall: send
-    mov rdi, [x11_sockfd]  ; load the connected socket file descriptor
     lea rsi, [cw_req]      ; pointer to our request buffer
-    mov rdx, 8            ; length of our QueryTree request
-    syscall                ; perform the send syscall
-    test rax, rax
-    js _query_tree_send_error
+    mov rdx, 8             ; length of our QueryTree request
+    call send_request
 
     ; --- Receive the QueryTree reply ---
-    mov rax, 45            ; syscall: recv
-    mov rdi, [x11_sockfd]  ; load the connected socket file descriptor
     lea rsi, [cw_req]      ; pointer to our request buffer
     mov rdx, 32            ; length of our receive buffer
-    syscall                ; perform the recv syscall
-    test rax, rax
-    js _query_tree_receive_error
-
-    ; Check if we received the expected number of bytes (32).
-    cmp rax, 32
-    jne _query_tree_receive_error
+    call recv_request
 
     ; Extract the root window ID from the reply (bytes 8-11).
     mov eax, [cw_req+8]
@@ -211,27 +193,40 @@ query_tree:
     ret
 
 send_request:
+    ; Arguments:
+    ; rsi: Pointer to the request buffer
+    ; rdx: Length of the request
     mov rax, 44            ; syscall: send
     mov rdi, [x11_sockfd]  ; load the connected socket file descriptor
-    lea rsi, [cw_req]      ; pointer to our request buffer
-    mov rdx, 32            ; length of our CreateWindow request
 .send_loop:
     syscall
     test rax, rax
-    js .check_eintr
+    js _win_error          ; Exit on error
     cmp rax, rdx
-    je .send_done
-    add rsi, rax
-    sub rdx, rax
+    je .send_done          ; Exit loop if all bytes are sent
+    add rsi, rax           ; Adjust buffer pointer
+    sub rdx, rax           ; Adjust remaining length
     jmp .send_loop
 .send_done:
     ret
 
-.check_eintr:
-    mov rdi, rax
-    cmp rdi, -4
-    je .send_loop
-    jmp _win_error
+recv_request:
+    ; Arguments:
+    ; rsi: Pointer to the receive buffer
+    ; rdx: Expected length of the response
+    mov rax, 45            ; syscall: recv
+    mov rdi, [x11_sockfd]  ; load the connected socket file descriptor
+.recv_loop:
+    syscall
+    test rax, rax
+    js _win_error          ; Exit on error
+    cmp rax, rdx
+    je .recv_done          ; Exit loop if all bytes are received
+    add rsi, rax           ; Adjust buffer pointer
+    sub rdx, rax           ; Adjust remaining length
+    jmp .recv_loop
+.recv_done:
+    ret
 
 intern_atom:
     ; Arguments:
@@ -255,23 +250,15 @@ intern_atom:
     rep movsb ; Copy the atom name to the request buffer
 
     ; -- Send the InternAtom request ---
-    mov rax, 44            ; syscall: send
-    mov rdi, [x11_sockfd]  ; load the connected socket file descriptor
     lea rsi, [cw_req]      ; pointer to our request buffer
-    add rcx, 8 ; Adjust length to include the atom name
-    mov rdx, rcx ; length of our InternAtom request
-    syscall                ; perform the send syscall
-    test rax, rax
-    js _win_error
+    add rcx, 8             ; Adjust length to include the atom name
+    mov rdx, rcx           ; length of our InternAtom request
+    call send_request
 
     ; -- Receive the InternAtom reply ---
-    mov rax, 45            ; syscall: recv
-    mov rdi, [x11_sockfd]  ; load the connected socket file descriptor
     lea rsi, [cw_req]      ; pointer to our request buffer
     mov rdx, 32            ; length of our receive buffer
-    syscall
-    test rax, rax
-    js _win_error
+    call recv_request
 
     ; Extract the atom ID from the reply (bytes 8-11).
     mov eax, [cw_req+8]
@@ -281,8 +268,6 @@ intern_atom:
 set_window_hints:
     ; -- Set _WN_WINDOW_TYPE to _WN_WINDOW_TYPE_NORMAL --
     ; Atom for _NET_WM_WINDOW_TYPE
-    mov rax, 44           ; syscall: send
-    mov rdi, [x11_sockfd] ; load the connected socket file descriptor
     lea rsi, [cw_req]     ; pointer to our request buffer
 
     ; Build the ChangeProperty request
@@ -314,7 +299,7 @@ set_window_hints:
 
     ; Send the ChangeProperty request
     mov rdx, 32           ; length of our ChangeProperty request
-    syscall
+    call send_request
 
     ; --- Set WM_PROTOCOLS and WM_DELETE_WINDOW ---
     ; Atom for WM_PROTOCOLS
@@ -324,7 +309,7 @@ set_window_hints:
     mov dword [cw_req+12], WM_DELETE_WINDOW
 
     ; Send the ChangeProperty request
-    syscall
+    call send_request
 
     ret
 
