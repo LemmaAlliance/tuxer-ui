@@ -13,12 +13,13 @@ section .data
     net_wm_window_type_normal db "_NET_WM_WINDOW_TYPE_NORMAL", 0
     wm_protocols db "WM_PROTOCOLS", 0
     wm_delete_window db "WM_DELETE_WINDOW", 0
+    atom db "ATOM", 0
     creating_window  db "Creating window...", 0x0A, 0
     window_created   db "Window created.", 0x0A, 0
     win_err_msg db "Error creating window!", 0x0A, 0
     get_root_window db "Getting root window ID...", 0x0A, 0
     query_tree_snd_err db "Error sending QueryTree request!", 0x0A, 0
-    query_tree_rcv_err db "Error receiving QueryTree reply!", 0x0A, 0
+    query_tree_rcv_err db "QueryTree: Error receiving reply!", 0x0A, 0
     root_window_err db "Error getting root window ID!", 0x0A, 0
 
 section .bss align=4
@@ -168,6 +169,7 @@ create_window:
     ; Set window hints
     call set_window_hints
 
+    xor rax, rax  ; Indicate success
     ret
 
 query_tree:
@@ -246,6 +248,8 @@ intern_atom:
     mov rdi, rdi
     mov rcx, rsi ; Length of the atom name
     lea rdi, [cw_req+8] ; Pointer to the request buffer
+    cmp rsi, 24  ; Ensure atom name fits within the buffer
+    ja _win_error
     rep movsb ; Copy the atom name to the request buffer
 
     ; -- Send the InternAtom request ---
