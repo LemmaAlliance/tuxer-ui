@@ -9,6 +9,10 @@ extern x11_sockfd
 section .data
     window_width dw 800
     window_height dw 600
+    net_wm_winow_type db "_NET_WM_WINDOW_TYPE", 0
+    net_wm_window_type_normal db "_NET_WM_WINDOW_TYPE_NORMAL", 0
+    wm_protocols db "WM_PROTOCOLS", 0
+    wm_delete_window db "WM_DELETE_WINDOW", 0
     creating_window  db "Creating window...", 0x0A, 0
     window_created   db "Window created.", 0x0A, 0
     win_err_msg db "Error creating window!", 0x0A, 0
@@ -22,6 +26,10 @@ section .bss align=4
     cw_req resb 32      ; Reserve 32 bytes for the CreateWindow request
     root_window_id resd 1 ; Reserve 4 bytes for the root window ID
     last_window_id resd 1 ; Reserve 4 bytes for the last window ID
+    _NET_WM_WINDOW_TYPE resd 1
+    _NET_WM_WINDOW_TYPE_NORMAL resd 1
+    WM_PROTOCOLS resd 1
+    WM_DELETE_WINDOW resd 1
 
 section .text
 ; A buffer for our CreateWindow request
@@ -123,6 +131,34 @@ create_window:
     call print
 
     xor rax, rax
+
+    ; Intern _NET_WM_WINDOW_TYPE
+    lea rsi, [net_wm_winow_type]
+    mov rsi, 20
+    lea rdx [_NET_WM_WINDOW_TYPE]
+    call intern_atom
+
+    ; Intern _NET_WM_WINDOW_TYPE_NORMAL
+    lea rdi, [net_wm_window_type_normal]
+    mov rsi, 24
+    lea rdx [_NET_WM_WINDOW_TYPE_NORMAL]
+    call intern_atom
+
+    ; Intern WM_PROTOCOLS
+    lea rdi, [wm_protocols]
+    mov rsi, 11
+    lea rdx [WM_PROTOCOLS]
+    call intern_atom
+
+    ; Intern WM_DELETE_WINDOW
+    lea rdi, [wm_delete_window]
+    mov rsi, 15
+    lea rdx [WM_DELETE_WINDOW]
+    call intern_atom
+
+    ; Set window hints
+    call set_window_hints
+
     ret
 
 query_tree:
@@ -184,6 +220,46 @@ send_request:
     cmp rdi, -4
     je .send_loop
     jmp _win_error
+
+intern_atom:
+    ; Arguments:
+    ; rdi: Pointer to the atom name (e.g., "_NET_WM_WINDOW_TYPE")
+    ; rsi: Length of the atom name
+    ; rdx: address to store the atom ID
+
+    ; -- Build the InternAtom request ---
+    mov byte [cw_req], 16 ; Major opcode for InternAtom
+    mov byte [cw_req+1], 0 ; Only one atom is requested
+    mov word [cw_req+2], 2 ; Request length in 4-byte units (2 for 8 bytes)
+    mov word [cw_req+4], si
+    mov word [cw_req+6], 0 ; Only one atom is requested
+    lea rax, [cw_req+8] ; Pointer to the atom name
+    mov rdi, rdi
+    mov rcx, rsi ; Length of the atom name
+    rep movsb ; Copy the atom name to the request buffer
+
+    ; -- Send the InternAtom request ---
+    mov rax, 44            ; syscall: send
+    mov rdi, [x11_sockfd]  ; load the connected socket file descriptor
+    lea rsi, [cw_req]      ; pointer to our request buffer
+    mov rdx, 8 + rsi ; length of our InternAtom request
+    syscall                ; perform the send syscall
+    test rax, rax
+    js _win_error
+
+    ; -- Receive the InternAtom reply ---
+    mov rax, 45            ; syscall: recv
+    mov rdi, [x11_sockfd]  ; load the connected socket file descriptor
+    lea rsi, [cw_req]      ; pointer to our request buffer
+    mov rdx, 32            ; length of our receive buffer
+    syscall
+    test rax, rax
+    js _win_error
+
+    ; Extract the atom ID from the reply (bytes 8-11).
+    mov eax, [cw_req+8]
+    mov [rdx], eax ; Store the atom ID in the provided address
+    ret
 
 set_window_hints:
     ; -- Set _WN_WINDOW_TYPE to _WN_WINDOW_TYPE_NORMAL --
