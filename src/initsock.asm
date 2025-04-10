@@ -60,6 +60,10 @@ initsock:
     lea rsi, [x11_socket_path]
     call strcpy               ; Copy the socket path
 
+    ; Debug: Print the current socket path being tried
+    mov rdi, x11_socket_path
+    call print
+
     mov rdi, connecting
     call print
 
