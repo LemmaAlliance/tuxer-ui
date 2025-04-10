@@ -19,9 +19,7 @@ section .data
     handshake_error_msg db 'Error with handshake!', 0x0A, 0
 
     ; Path to the X11 server
-    x11_socket_path db "/tmp/.X11-unix/X0", 0  ; Default socket path
-    socket_base_path db "/tmp/.X11-unix/X", 0  ; Base path for X11 sockets
-    max_socket_number db 10  ; Maximum socket number (X0 to X9)
+    x11_socket_path db "/tmp/.X11-unix/X1", 0  ; Default socket path
 
     ; X11 Handshake request (Big Endian format)
     handshake_request db 0x6C, 0x00, 0x00, 0x00, 0x11, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x12, 0x34, 0x56, 0x78
@@ -52,48 +50,24 @@ initsock:
     mov rdi, opened
     call print
 
-    ; Setup sockaddr_un structure
-    mov byte [sockaddr], 1    ; AF_UNIX (Address Family)
-
-.try_next_socket:
-    lea rdi, [sockaddr + 2]   ; Pointer to path part
-    lea rsi, [x11_socket_path]
-    call strcpy               ; Copy the socket path
-
-    ; Debug: Print the current socket path being tried
-    mov rdi, x11_socket_path
-    call print
-
     mov rdi, connecting
     call print
 
-    ; Connect to X11 socket (sys_connect)
-    mov rax, 42      ; syscall: connect
-    mov rdi, r12     ; socket FD
+    mov byte [sockaddr], 1 ; AF_UNIX
+    lea rdi, [sockaddr + 2] ; Skip the first two bytes
+    lea rsi, [x11_socket_path] ; Path to the X11 socket
+    call strcpy
+
+    mov rax, 42
+    mov rdx, r12
     lea rsi, [sockaddr]
-    mov rdx, 110     ; sockaddr size
+    mov rdx, 110
     syscall
-    test rax, rax ; Did we actually connect?
-    js .increment_socket
+    test rax, rax ; Check for errors
+    js _connect_error
 
     mov rdi, connected
     call print
-    jmp .connected_success
-
-.increment_socket:
-    ; Increment the socket number in x11_socket_path
-    mov rsi, x11_socket_path
-    add rsi, 17      ; Offset to the socket number in the path
-    mov al, [rsi]    ; Load current socket number
-    sub al, '0'      ; Convert ASCII to integer
-    inc al           ; Increment the socket number
-    cmp al, [max_socket_number]
-    jge _connect_error ; If we've exceeded max, fail
-    add al, '0'      ; Convert back to ASCII
-    mov [rsi], al    ; Store updated socket number
-    jmp .try_next_socket
-
-.connected_success:
 
     ; Put rax into the socket
     mov [x11_sockfd], rax
@@ -159,11 +133,23 @@ _error_handshake:
 strcpy:
     ; rdi = destination
     ; rsi = source
+    ; Ensure source and destination are valid
+    test rdi, rdi
+    jz .error
+    test rsi, rsi
+    jz .error
+
     .loop:
-        mov al, [rsi]
-        mov [rdi], al
+        mov al, [rsi]       ; Load byte from source
+        mov [rdi], al       ; Store byte to destination
         inc rsi
         inc rdi
-        test al, al  ; Null terminator reached?
+        test al, al         ; Null terminator reached?
         jnz .loop
     ret
+
+    .error:
+        ; Handle error (e.g., print a message or exit)
+        mov rdi, socket_error_msg
+        call print
+        call exit_err
