@@ -9,6 +9,7 @@ section .data
     welcome db 'Welcome to the tuxer-ui software', 0x0A, 0
     exiting db 'Exiting software...', 0x0A, 0
     loop_error db 'Error in loop!', 0x0A, 0
+    sleep_ts dq 1, 0
 
 section .text
     global _start
@@ -32,16 +33,14 @@ _start:
     call exit
 
 window_loop:
-    mov rax, 35
-    mov rdi, -1
-    mov rsi, 0
-    mov rdx, 0
+.loop:
+    mov rax, 35            ; nanosleep
+    lea rdi, [sleep_ts]    ; timespec pointer
+    mov rsi, 0             ; no remaining time
     syscall
-
     test rax, rax
     js _loop_error
-
-    jmp window_loop
+    jmp .loop
 
 _loop_error:
     mov rdi, loop_error

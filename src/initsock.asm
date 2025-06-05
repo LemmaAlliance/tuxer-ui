@@ -3,6 +3,7 @@ global initsock
 extern print
 extern exit
 extern exit_err
+extern root_window_id
 
 section .data
     ; Messages for printing
@@ -19,13 +20,13 @@ section .data
     handshake_error_msg db 'Error with handshake!', 0x0A, 0
 
     ; Path to the X11 server
-    x11_socket_path db "/tmp/.X11-unix/X1", 0  ; Default socket path
+    x11_socket_path db "/tmp/.X11-unix/X99", 0  ; Default socket path for Xvfb
 
-    ; X11 Handshake request (Big Endian format)
-    handshake_request db 0x6C, 0x00, 0x00, 0x00, 0x11, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x12, 0x34, 0x56, 0x78
+    ; Minimal X11 handshake request (little-endian)
+    handshake_request db 0x6C, 0x00, 0x0B, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
 
 section .bss
-    response_buffer resb 16
+    response_buffer resb 256
     sockaddr resb 110
     x11_sockfd resq 1
 
@@ -58,8 +59,8 @@ initsock:
     lea rsi, [x11_socket_path] ; Path to the X11 socket
     call strcpy
 
-    mov rax, 42
-    mov rdx, r12
+    mov rax, 42               ; syscall: connect
+    mov rdi, r12              ; socket FD
     lea rsi, [sockaddr]
     mov rdx, 110
     syscall
@@ -69,8 +70,8 @@ initsock:
     mov rdi, connected
     call print
 
-    ; Put rax into the socket
-    mov [x11_sockfd], rax
+    ; Store the socket file descriptor
+    mov [x11_sockfd], r12
 
     mov rdi, sending
     call print
@@ -104,15 +105,18 @@ recv_handshake_response:
     lea rsi, [response_buffer]  ; Buffer pointer
     mov rax, 45                 ; syscall: recv
     mov rdi, r12                ; socket FD
-    mov rdx, 16                 ; Number of bytes
+    mov rdx, 256                ; Number of bytes
     syscall
     test rax, rax               ; Check if recv was successful
     js _error_handshake
 
     ; Check if response is valid
     mov al, [response_buffer]   ; Status byte
-    cmp al, 0x00                ; Success status?
+    cmp al, 0x01                ; Success status is 1
     jne _error_handshake
+    ; Store root window ID from setup reply (offset 100)
+    mov eax, [response_buffer + 100]
+    mov [root_window_id], eax
     ret
 
 _error_socket:
