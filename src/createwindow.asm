@@ -1,5 +1,6 @@
 bits 64
 global create_window
+global root_window_id
 extern print
 extern exit
 extern exit_err
@@ -132,7 +133,17 @@ create_window:
     mov rdx, 32            ; length of our CreateWindow request
     call send_request
 
-    ; Log that the window was “created”.
+    ; Map the window so it becomes visible
+    mov byte [cw_req], 8   ; MapWindow opcode
+    mov byte [cw_req+1], 0
+    mov word [cw_req+2], 2
+    mov eax, [last_window_id]
+    mov [cw_req+4], eax
+    lea rsi, [cw_req]
+    mov rdx, 8
+    call send_request
+
+    ; Log that the window was "created".
     mov rdi, window_created
     call print
 
