@@ -16,7 +16,10 @@ I have written code to connect to X11, send & recieve handshakes. I am yet to ve
 ⭕ | Turn this from a project to a package<br />
 
 ## Contributing
-If you want to contribute to this project (or make your own version), first familiarise yourself with the license on "LICENSE", then fork the repo and setup your development enviroment.
+If you want to contribute to this project (or make your own version), first familiarise yourself with the license on "LICENSE", then fork the repo and setup your development enviroment. <br />
+
+REMEMBER: Always read the Xlib [documentation](https://www.x.org/releases/current/doc/libX11/libX11/libX11.html)
+
 For debian based systems:
 ```bash
 sudo apt update
