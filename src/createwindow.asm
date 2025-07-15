@@ -264,9 +264,12 @@ intern_atom:
     ja _win_error
 
     ; Copy the atom name to the request buffer
-    lea rdi, [cw_req+8]    ; Pointer to the request buffer
-    mov rcx, rsi           ; Length of the atom name
-    rep movsb              ; Copy atom name
+    push rsi              ; Save length
+    mov rcx, rsi          ; Length to rcx
+    mov rsi, rdi          ; Original source to rsi
+    lea rdi, [cw_req+8]   ; Destination
+    rep movsb             ; Copy
+    pop rsi               ; Restore length
 
     ; Adjust the request length to include the atom name
     add rsi, 8             ; Total length = header (8 bytes) + atom name

@@ -19,7 +19,22 @@ all: $(OUTPUT)
 # Install dependencies
 deps:
 	@echo "Installing dependencies..."
-	@sudo apt-get update && sudo apt-get install -y nasm gcc
+	@sudo apt-get update && sudo apt-get install -y nasm gcc xorg xserver-xorg xauth libx11-dev xvfb
+	@echo "Setting up virtual framebuffer..."
+	@if ! pgrep Xvfb > /dev/null; then \
+		Xvfb :99 -screen 0 1024x768x16 & \
+		echo "Started Xvfb"; \
+	fi
+	@export DISPLAY=:99
+	@echo "Checking X11 environment..."
+	@echo "DISPLAY=${DISPLAY}"
+	@if [ -z "$$DISPLAY" ]; then \
+		echo "Warning: No DISPLAY variable set"; \
+	fi
+	@echo "Installing X11 development files..."
+	@if [ ! -d "libx11" ]; then \
+		git clone https://gitlab.freedesktop.org/xorg/lib/libx11.git; \
+	fi
 
 # Compile assembly files into object files
 $(BUILD_DIR)/%.o: $(SRC_DIR)/%.asm
