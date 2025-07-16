@@ -21,20 +21,28 @@ deps:
 	@echo "Installing dependencies..."
 	@sudo apt-get update && sudo apt-get install -y nasm gcc xorg xserver-xorg xauth libx11-dev xvfb
 	@echo "Setting up virtual framebuffer..."
+	@sudo mkdir -p /tmp/.X11-unix
+	@sudo chmod 1777 /tmp/.X11-unix
 	@if ! pgrep Xvfb > /dev/null; then \
 		Xvfb :99 -screen 0 1024x768x16 & \
-		echo "Started Xvfb"; \
+		sleep 2; \
 	fi
-	@export DISPLAY=:99
+	@DISPLAY=:99.0 xset s off
+	@echo "DISPLAY=:99.0" >> ~/.bashrc
+	@echo "export DISPLAY" >> ~/.bashrc
 	@echo "Checking X11 environment..."
 	@echo "DISPLAY=${DISPLAY}"
 	@if [ -z "$$DISPLAY" ]; then \
-		echo "Warning: No DISPLAY variable set"; \
+		echo "Please run: export DISPLAY=:99.0"; \
 	fi
 	@echo "Installing X11 development files..."
 	@if [ ! -d "libx11" ]; then \
 		git clone https://gitlab.freedesktop.org/xorg/lib/libx11.git; \
 	fi
+
+# Add this new target to run with proper display setting
+run-x11: $(OUTPUT)
+	DISPLAY=:99.0 ./$(OUTPUT)
 
 # Compile assembly files into object files
 $(BUILD_DIR)/%.o: $(SRC_DIR)/%.asm
@@ -56,4 +64,4 @@ clean:
 	rm -rf $(BUILD_DIR)
 
 # Phony targets
-.PHONY: all run clean deps
+.PHONY: all run clean deps run-x11
