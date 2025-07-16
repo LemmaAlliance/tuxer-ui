@@ -2,6 +2,7 @@ bits 64
 global create_window
 global root_window_id
 extern print
+extern print_hex
 extern exit
 extern exit_err
 extern x11_sockfd
@@ -22,6 +23,11 @@ section .data
     query_tree_snd_err db "Error sending QueryTree request!", 0x0A, 0
     query_tree_rcv_err db "QueryTree: Error receiving reply!", 0x0A, 0
     root_window_err db "Error getting root window ID!", 0x0A, 0
+    debug_send db "Sending request...", 0x0A, 0
+    debug_recv db "Receiving reply...", 0x0A, 0
+    debug_reply_type db "Reply type: 0x", 0
+    debug_reply_len db "Reply length: 0x", 0
+    debug_root_id db "Root window ID: 0x", 0
 
 section .bss align=4
     ; Do not exeed 32 bytes for cw_req EVER!!!!
@@ -186,25 +192,78 @@ create_window:
     ret
 
 query_tree:
+    ; Clear request buffer first
+    push rcx
+    push rdi
+    xor eax, eax
+    lea rdi, [cw_req]
+    mov rcx, 32
+    rep stosb
+    pop rdi
+    pop rcx
+
     ; --- Build the QueryTree request ---
-    mov byte [cw_req], 15
-    mov byte [cw_req+1], 0
-    mov word [cw_req+2], 2
-    mov dword [cw_req+4], 0
+    mov byte [cw_req], 15      ; QueryTree opcode
+    mov byte [cw_req+1], 0     ; unused
+    mov word [cw_req+2], 2     ; request length (8 bytes / 4)
+    mov dword [cw_req+4], 0    ; window to query (root window = 0)
+
+    ; Print debug message before sending
+    push rdi
+    mov rdi, debug_send
+    call print
+    pop rdi
 
     ; --- Send the QueryTree request ---
     lea rsi, [cw_req]      ; pointer to our request buffer
     mov rdx, 8             ; length of our QueryTree request
     call send_request
 
-    ; --- Receive the QueryTree reply ---
+    ; Print debug message before receiving
+    push rdi
+    mov rdi, debug_recv
+    call print
+    pop rdi
+
+    ; First receive just the header (32 bytes)
     lea rsi, [cw_req]      ; pointer to our request buffer
-    mov rdx, 32            ; length of our receive buffer
+    mov rdx, 32            ; length of header
     call recv_request
 
-    ; Extract the root window ID from the reply (bytes 8-11).
+    ; Print reply type for debugging
+    push rdi
+    mov rdi, debug_reply_type
+    call print
+    movzx rax, byte [cw_req]  ; Get reply type
+    call print_hex
+    pop rdi
+
+    ; Print reply length for debugging
+    push rdi
+    mov rdi, debug_reply_len
+    call print
+    mov eax, [cw_req+4]    ; Get reply length
+    call print_hex
+    pop rdi
+
+    ; Check reply format (first byte should be 1 for successful reply)
+    mov al, byte [cw_req]
+    cmp al, 1             ; X11 successful reply is 1, not 0
+    jne _query_tree_receive_error
+
+    ; Extract the root window ID from offset 8
     mov eax, [cw_req+8]
     mov [root_window_id], eax
+
+    ; Print root window ID for debugging
+    push rdi
+    push rax
+    mov rdi, debug_root_id
+    call print
+    pop rax
+    call print_hex
+    pop rdi
+
     test eax, eax
     jz _root_window_error
     ret
@@ -336,6 +395,8 @@ set_window_hints:
     call send_request
 
     ret
+
+
 
 _win_error:
     mov rdi, win_err_msg
