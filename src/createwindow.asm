@@ -230,23 +230,34 @@ query_tree:
     mov rdx, 32            ; length of header
     call recv_request
 
-    ; Print reply type for debugging
+    ; Print the first few bytes of the response for debugging
     push rdi
+    push rax
     mov rdi, debug_reply_type
     call print
     movzx rax, byte [cw_req]  ; Get reply type
     call print_hex
+    pop rax
     pop rdi
 
-    ; Print reply length for debugging
+    ; Print each byte of the response for debugging
     push rdi
-    mov rdi, debug_reply_len
-    call print
-    mov eax, [cw_req+4]    ; Get reply length
-    call print_hex
+    push rax
+    push rcx
+    mov rcx, 32           ; Print first 32 bytes
+    lea rdi, [cw_req]     ; Load buffer address
+.debug_loop:
+    push rcx
+    movzx rax, byte [rdi] ; Load single byte into rax
+    call print_hex        ; Print the byte
+    pop rcx
+    inc rdi              ; Move to next byte
+    loop .debug_loop
+    pop rcx
+    pop rax
     pop rdi
 
-    ; Check reply format (first byte should be 1 for successful reply)
+    ; Continue with existing code...
     mov al, byte [cw_req]
     cmp al, 1             ; X11 successful reply is 1, not 0
     jne _query_tree_receive_error
@@ -255,14 +266,12 @@ query_tree:
     mov eax, [cw_req+8]
     mov [root_window_id], eax
 
-    ; Print root window ID for debugging
-    push rdi
-    push rax
-    mov rdi, debug_root_id
+    ; Print debug message and root window ID
+    push rax                    ; Save root window ID
+    mov rdi, debug_root_id     ; Load "Root window ID: 0x" message
     call print
-    pop rax
-    call print_hex
-    pop rdi
+    pop rax                    ; Restore root window ID
+    call print_hex             ; Print the ID in hexadecimal
 
     test eax, eax
     jz _root_window_error
@@ -395,8 +404,6 @@ set_window_hints:
     call send_request
 
     ret
-
-
 
 _win_error:
     mov rdi, win_err_msg
